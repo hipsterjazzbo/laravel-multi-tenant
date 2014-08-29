@@ -17,7 +17,7 @@ trait ScopedByTenant {
 	public static function bootScopedByTenant()
 	{
 		// Add the global scope that will handle all operations except create()
-		static::addGlobalScope(new TenantScope);
+		static::addGlobalScope(static::getTenantScope());
 
 		// Add an observer that will automatically add the tenant id when create()-ing
 		static::observe(new TenantObserver);
@@ -32,41 +32,7 @@ trait ScopedByTenant {
 	 */
 	public static function allTenants()
 	{
-		return with(new static)->newQueryWithoutScope(new TenantScope);
-	}
-
-	/**
-	 * Get the name of the "tenant id" column.
-	 *
-	 * @return string
-	 */
-	public function getTenantColumn()
-	{
-		return Config::get('laravel-multi-tenant::tenant_column');
-	}
-
-	/**
-	 * Get the fully qualified "tenant id" column.
-	 *
-	 * @return string
-	 */
-	public function getQualifiedTenantColumn()
-	{
-		return $this->getTable() . '.' . $this->getTenantColumn();
-	}
-
-	/**
-	 * Prepare a raw where clause. Do it this way instead of using where()
-	 * to avoid issues with bindings when removing.
-	 *
-	 * @return string
-	 */
-	public function getTenantWhereClause()
-	{
-		$tenantColumn = $this->getQualifiedTenantColumn();
-		$tenantId     = TenantScope::getTenantId();
-
-		return "{$tenantColumn} = '{$tenantId}'";
+		return with(new static)->newQueryWithoutScope(static::getTenantScope());
 	}
 
 	/**
@@ -90,4 +56,14 @@ trait ScopedByTenant {
 			throw with(new ModelNotFoundForTenantException())->setModel(get_called_class());
 		}
 	}
+
+	/**
+	 * Returns tenant scope for this model.
+	 *
+	 * @return Illuminate\Database\Eloquent\ScopeInterface
+	 */
+	protected static function getTenantScope()
+	{
+		return TenantScopeFacade::getFacadeRoot();
+	}	
 } 
