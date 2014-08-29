@@ -62,7 +62,7 @@ trait ScopedByTenant {
 	 *
 	 * @return Illuminate\Database\Eloquent\ScopeInterface
 	 */
-	protected static function getTenantScope()
+	public static function getTenantScope()
 	{
 		return TenantScopeFacade::getFacadeRoot();
 	}	
