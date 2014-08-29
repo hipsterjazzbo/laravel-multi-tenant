@@ -126,20 +126,21 @@ class TenantScope implements ScopeInterface
      */
     public function getModelTenants($model)
     {
-        if (isset($model->tenantAttribute)) {
-            if (is_array($model->tenantAttribute)) {
+        $modelClass = get_class($model);
+        if (isset($modelClass::$tenantAttribute)) {
+            $atts = $modelClass::$tenantAttribute;
+            if (is_array($atts)) {
                 $tenants = [];
-                foreach ($model->tenantAttribute as $key => $attribute) {
+                foreach ($atts as $key => $attribute) {
                     $tenants[$attribute] = $this->getTenantId($attribute, $model);
                 }
                 return $tenants;
             } else {
-                $attribute = $model->tenantAttribute;
-                return [$attribute => $this->getTenantId($attribute, $model)];
+                return [$atts => $this->getTenantId($atts, $model)];
             }
         } else {
             throw new TenantNotSetException(
-                'You MUST define a "tenants" variable in "'.get_class($model).'" to define which attribute(s) will be used as tenant'
+                'You MUST define a static "tenantAttribute" variable in "'.get_class($model).'" to define which attribute(s) will be used as tenant'
             );
         }
     }
@@ -183,7 +184,7 @@ class TenantScope implements ScopeInterface
     protected function getTenantWhereClause($model, $attribute, $id)
     {
         $tenantAttribute = $model->getTable() . '.' . $attribute;
-        $tenantId     = $id;
+        $tenantId = $id;
 
         return "{$tenantAttribute} = '{$tenantId}'";
     }
