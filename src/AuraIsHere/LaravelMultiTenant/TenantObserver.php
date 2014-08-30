@@ -1,6 +1,5 @@
 <?php namespace AuraIsHere\LaravelMultiTenant;
 
-use TenantScope;
 use Illuminate\Database\Eloquent\Model;
 
 class TenantObserver {
