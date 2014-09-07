@@ -22,6 +22,16 @@ class TenantScope implements ScopeInterface
     }
 
     /**
+     * return tenant by attribute
+     * @param  $attribute
+     * @return mixed
+     */
+    public function getTenant($attribute)
+    {
+        return $this->tenants[$attribute];
+    }
+
+    /**
      * Add $attribute => $id to the current tenants array
      *
      * @param  string $attribute
