@@ -90,7 +90,10 @@ class TenantScope implements ScopeInterface {
 		// Use whereRaw instead of where to avoid issues with bindings when removing
 		foreach ($this->getModelTenants($model) as $tenantColumn => $tenantId)
 		{
-			$builder->whereRaw($model->getTenantWhereClause($tenantColumn, $tenantId));
+            		if(!is_null($tenantId))
+            		{
+                		$builder->whereRaw($model->getTenantWhereClause($tenantColumn, $tenantId));
+            		}
 		}
 	}
 
@@ -135,7 +138,10 @@ class TenantScope implements ScopeInterface {
 		// Otherwise, scope the new model
 		foreach ($this->getModelTenants($model) as $tenantColumn => $tenantId)
 		{
-			$model->{$tenantColumn} = $tenantId;
+         		if(!is_null($tenantId))
+            		{
+                		$model->{$tenantColumn} = $tenantId;
+            		}
 		}
 	}
 
@@ -174,9 +180,7 @@ class TenantScope implements ScopeInterface {
 	{
 		if (! $this->hasTenant($tenantColumn))
 		{
-			throw new TenantColumnUnknownException(
-				get_class($this->model) . ': tenant column "' . $tenantColumn . '" NOT found in tenants scope "' . json_encode($this->tenants) . '"'
-			);
+			return null;
 		}
 
 		return $this->tenants[$tenantColumn];
