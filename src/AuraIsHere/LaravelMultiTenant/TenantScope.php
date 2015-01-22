@@ -149,11 +149,14 @@ class TenantScope implements ScopeInterface {
 	 */
 	public function getModelTenants(Model $model)
 	{
+		$modelTenants = [];
+
+		if(! $this->enabled) return $modelTenants;
+		
 		$modelTenantColumns = $model->getTenantColumns();
 
 		if (! is_array($modelTenantColumns)) $modelTenantColumns = [$modelTenantColumns];
 
-		$modelTenants = [];
 
 		foreach ($modelTenantColumns as $tenantColumn)
 		{
