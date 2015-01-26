@@ -1,11 +1,12 @@
 <?php namespace AuraIsHere\LaravelMultiTenant\Traits;
 
-use App;
-use AuraIsHere\LaravelMultiTenant\Exceptions\TenantModelNotFoundException;
 use AuraIsHere\LaravelMultiTenant\TenantScope;
-use Config;
+use AuraIsHere\LaravelMultiTenant\Exceptions\TenantModelNotFoundException;
+use AuraIsHere\LaravelMultiTenant\Facades\TenantScopeFacade;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Support\Facades\App;
+use Illuminate\Support\Facades\Config;
 
 /**
  * Class TenantScopedModelTrait.
@@ -81,5 +82,5 @@ trait TenantScopedModelTrait
         } catch (ModelNotFoundException $e) {
             throw with(new TenantModelNotFoundException())->setModel(get_called_class());
         }
-    }
+	}
 }
