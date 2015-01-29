@@ -48,7 +48,7 @@ trait TenantScopedModelTrait
      */
     public function getTenantColumns()
     {
-        return isset($this->tenantColumns) ? $this->tenantColumns : Config::get('laravel-multi-tenant::default_tenant_columns');
+        return isset($this->tenantColumns) ? $this->tenantColumns : Config::get('tenant.default_tenant_columns');
     }
 
     /**
