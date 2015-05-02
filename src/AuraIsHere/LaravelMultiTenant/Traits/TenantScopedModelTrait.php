@@ -1,11 +1,11 @@
 <?php namespace AuraIsHere\LaravelMultiTenant\Traits;
 
-use App;
 use AuraIsHere\LaravelMultiTenant\Exceptions\TenantModelNotFoundException;
 use AuraIsHere\LaravelMultiTenant\TenantScope;
-use Config;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Support\Facades\App;
+use Illuminate\Support\Facades\Config;
 
 /**
  * Class TenantScopedModelTrait.
