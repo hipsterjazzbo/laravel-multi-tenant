@@ -5,6 +5,7 @@ use App;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use AuraIsHere\LaravelMultiTenant\TenantScope;
+use AuraIsHere\LaravelMultiTenant\TenantQueryBuilder;
 use AuraIsHere\LaravelMultiTenant\Facades\TenantScopeFacade;
 use AuraIsHere\LaravelMultiTenant\Exceptions\TenantModelNotFoundException;
 
@@ -89,4 +90,60 @@ trait TenantScopedModelTrait {
 			throw with(new TenantModelNotFoundException)->setModel(get_called_class());
 		}
 	}
+
+	/**
+     * Get a new query builder for the model's table.
+     *
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    public function newTenantQuery()
+    {
+        $builder = $this->newTenantQueryWithoutScopes();
+        return $this->applyGlobalScopes($builder);
+    }
+
+    /**
+     * Get a new query builder with nested where
+     * that doesn't have any global scopes.
+     *
+     * @return \Illuminate\Database\Eloquent\Builder|static
+     */
+    public function newTenantQueryWithoutScopes()
+    {
+        $builder = $this->newEloquentTenantBuilder(
+            $this->newBaseQueryBuilder()
+        );
+        // Once we have the query builders, we will set the model instances so the
+        // builder can easily access any information it may need from the model
+        // while it is constructing and executing various queries against it.
+        return $builder->setModel($this)->with($this->with);
+    }
+
+	/**
+     * Create a new Eloquent Tenant query builder for the model.
+     *
+     * @param  \Illuminate\Database\Query\Builder $query
+     * @return \Illuminate\Database\Eloquent\Builder|static
+     */
+    public function newEloquentTenantBuilder($query)
+    {
+        return new TenantQueryBuilder($query);
+    }
+
+ 	/**
+     * Handle dynamic method calls into the model.
+     *
+     * @param  string  $method
+     * @param  array   $parameters
+     * @return mixed
+     */
+    public function __call($method, $parameters)
+    {
+        if (in_array($method, ['increment', 'decrement'])) {
+            return call_user_func_array([$this, $method], $parameters);
+        }
+        
+        $query = $this->newTenantQuery();
+        return call_user_func_array([$query, $method], $parameters);
+    }
 } 
