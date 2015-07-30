@@ -92,14 +92,20 @@ trait TenantScopedModelTrait {
 	}
 
 	/**
-     * Get a new query builder for the model's table.
+     * Get a new query builder with nested where for the model's table. 
      *
-     * @return \Illuminate\Database\Eloquent\Builder
+     * @return AuraIsHere\LaravelMultiTenant\TenantQueryBuilder
      */
     public function newTenantQuery()
     {
-        $builder = $this->newTenantQueryWithoutScopes();
-        return $this->applyGlobalScopes($builder);
+        $tenant_builder = $this->newTenantQueryWithoutScopes();
+
+        //Create a normal query first, allowing the (interfaced) 
+        // scope to use the whereRaw from the non-overridden
+        // Eloquent\Query
+        $tenant_builder->setQuery($this->newQuery()->getQuery());
+
+        return $tenant_builder;
     }
 
     /**
