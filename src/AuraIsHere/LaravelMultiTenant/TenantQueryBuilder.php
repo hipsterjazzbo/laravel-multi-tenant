@@ -22,7 +22,7 @@ class TenantQueryBuilder extends Builder
 	 * @var string[]
 	 */
 	protected $shouldBeNested = ["whereraw", "orwhereraw", 
-								 "wherebetween", "orwherebetween", "wherenotbeteen", "orwherenotbetween", 
+								 "wherebetween", "orwherebetween", "wherenotbetween", "orwherenotbetween", 
 								 "wherenested", "wheresub", "addnestedsubquery",
 								 "whereexists", "orwhereexists", "wherenotexists", "orwherenotexists", 
 								 "wherein", "orwherein", "wherenotin", "orwherenotin",
@@ -42,27 +42,7 @@ class TenantQueryBuilder extends Builder
 	 */
 	public function where($column, $operator = null, $value = null, $boolean = 'and')
 	{
-		if(is_null($this->nestedWhere)) 
-		{
-			//Create a new query
-			// and add it as a nested where
-			$query = $this->model->newQueryWithoutScopes();
-
-            call_user_func_array(array($query, 'where'), func_get_args());
-			
-			$this->query->addNestedWhereQuery($query->getQuery(), $boolean);
-			$this->nestedWhere = $query;
-		}
-		else
-		{
-			//Push the where to the existing nested query
-			$query = $this->nestedWhere;
-			call_user_func_array(array($query, 'where'), func_get_args());	
-		}
-
-		$this->query->setBindings($query->getQuery()->getBindings());
-		
-		return $this;
+		return $this->addToNestedQuery('where', [$column, $operator, $value, $boolean]);
 	}
 
 	/**
@@ -139,7 +119,7 @@ class TenantQueryBuilder extends Builder
         } 
         elseif( in_array(strtolower($method), $this->shouldBeNested, true) ) 
         {
-        	//Catch any where methods and pass them to the nested query
+        	//Catch any nestable methods and pass them to the nested query
         	return $this->addToNestedQuery($method, $parameters);
 		}
 
