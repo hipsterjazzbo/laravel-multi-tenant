@@ -1,6 +1,8 @@
 <?php namespace AuraIsHere\LaravelMultiTenant;
 
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Relations\Relation;
 
 class TenantQueryBuilder extends Builder
 {
@@ -27,7 +29,7 @@ class TenantQueryBuilder extends Builder
 								 "wheredate", "whereday", "wheremonth", "whereyear", 
 								 "dynamicwhere"
 								];
-	
+		
 	/**
 	 * Add a basic where clause to the nested query.
 	 *
@@ -45,7 +47,12 @@ class TenantQueryBuilder extends Builder
 			// and add it as a nested where
 			$query = $this->model->newQueryWithoutScopes();
 
-			call_user_func_array(array($query, 'where'), func_get_args());
+			if ($column instanceof Closure) {
+                call_user_func($column, $query);
+            }
+            else {
+                call_user_func_array(array($query, 'where'), func_get_args());
+            }
 			
 			$this->query->addNestedWhereQuery($query->getQuery(), $boolean);
 			$this->nestedWhere = $query;
@@ -94,6 +101,33 @@ class TenantQueryBuilder extends Builder
 
 		return $this;
 	}
+
+	/**
+     * Merge the "wheres" from a relation query to a has query.
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder  $hasQuery
+     * @param  \Illuminate\Database\Eloquent\Relations\Relation  $relation
+     * @return void
+     */
+    protected function mergeWheresToHas(Builder $hasQuery, Relation $relation)
+    {
+        // Here we have the "has" query and the original relation. We need to copy over any
+        // where clauses the developer may have put in the relationship function over to
+        // the has query, and then copy the bindings from the "has" query to the main.
+        $relationQuery = $relation->getBaseQuery();
+        $hasQuery = $hasQuery->getModel()->removeGlobalScopes($hasQuery);
+        $hasQuery->mergeWheres(
+            $relationQuery->wheres, $relationQuery->getBindings()
+        );
+
+        if(!is_null($this->nestedWhere)) {
+            $this->nestedWhere->mergeBindings($hasQuery->getQuery());
+        }
+        else {
+            $this->query->mergeBindings($hasQuery->getQuery());
+        }
+    }
+
 
 	 /**
      * Dynamically handle calls into the query instance.
