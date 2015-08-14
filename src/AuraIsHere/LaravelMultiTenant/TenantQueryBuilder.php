@@ -1,5 +1,6 @@
 <?php namespace AuraIsHere\LaravelMultiTenant;
 
+use Closure;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\Relation;
@@ -47,31 +48,20 @@ class TenantQueryBuilder extends Builder
 			// and add it as a nested where
 			$query = $this->model->newQueryWithoutScopes();
 
-			if ($column instanceof Closure) {
-                call_user_func($column, $query);
-            }
-            else {
-                call_user_func_array(array($query, 'where'), func_get_args());
-            }
+            call_user_func_array(array($query, 'where'), func_get_args());
 			
 			$this->query->addNestedWhereQuery($query->getQuery(), $boolean);
 			$this->nestedWhere = $query;
 		}
-		else if ($column instanceof Closure)
-		{
-			$query = $this->model->newQueryWithoutScopes();
-			
-			call_user_func($column, $query);
-			$this->nestedWhere->addNestedWhereQuery($query->getQuery(), $boolean);;
-		}
 		else
 		{
+			//Push the where to the existing nested query
 			$query = $this->nestedWhere;
 			call_user_func_array(array($query, 'where'), func_get_args());	
 		}
 
 		$this->query->setBindings($query->getQuery()->getBindings());
-
+		
 		return $this;
 	}
 
