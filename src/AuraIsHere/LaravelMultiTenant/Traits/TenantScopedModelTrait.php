@@ -1,7 +1,7 @@
 <?php namespace AuraIsHere\LaravelMultiTenant\Traits;
 
-use Config;
-use App;
+use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Facades\App;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use AuraIsHere\LaravelMultiTenant\TenantScope;
