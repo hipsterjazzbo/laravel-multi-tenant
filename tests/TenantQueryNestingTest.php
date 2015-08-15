@@ -5,9 +5,9 @@ use Mockery as m;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Config;
 use AuraIsHere\LaravelMultiTenant\TenantScope;
-use AuraIsHere\LaravelMultiTenant\Traits\tenantScopedModelTrait;
+use AuraIsHere\LaravelMultiTenant\Traits\TenantScopedModelTrait;
 
-class TenantSeperationTest extends PHPUnit_Framework_TestCase
+class TenantQueryNestingTest extends PHPUnit_Framework_TestCase
 {
 	protected $model;
 	protected $tenantScope;
@@ -20,7 +20,7 @@ class TenantSeperationTest extends PHPUnit_Framework_TestCase
 		App::shouldReceive('make')->once()->andReturn($this->tenantScope);
 		Config::shouldReceive('get')->with('laravel-multi-tenant::default_tenant_columns')->andReturn(['tenant_id']);
 
-		$this->model = new EloquentBuilderTestSeperationStub;
+		$this->model = new EloquentBuilderTestNestingStub;
 		$this->mockConnectionForModel($this->model, 'SQLite');
 
 		//Set tenant
@@ -51,7 +51,7 @@ class TenantSeperationTest extends PHPUnit_Framework_TestCase
 	 * Test shows the original issue in which 'or where' clauses are not nested
 	 * and tests whether it is resolved (meaning: output sql matches a reference query)
 	 */
-	public function testSeperationQuery()
+	public function testNestingQuery()
 	{
 		//Reference query
 		$nestedQuery = $this->model->allTenants()->whereRaw("table.tenant_id = '1'");
@@ -72,7 +72,7 @@ class TenantSeperationTest extends PHPUnit_Framework_TestCase
 	 * Test whether builder with multiple global scopes produces
 	 *  correctly nested queries
 	 */
-	public function testGlobalScopeSeperationQuery()
+	public function testGlobalScopeNestingQuery()
 	{
 		$globalScopeModel = new EloquentBuilderTestGlobalScopeStub;
 		$globalScopeModel::addGlobalScope(new GlobalScopeStub);
@@ -117,6 +117,10 @@ class TenantSeperationTest extends PHPUnit_Framework_TestCase
 		                $query->select('id')
 		                      ->from('wobbles')
 		                      ->whereRaw('wobbles.wibble_id = wibbles.id');
+		            })
+		            ->whereHas('selfRelation', function($query) {
+		            	$query->whereFlubFlob(13,14)
+		            		  ->orWhereNull('plugh');
 		            });
 	}
 
@@ -154,11 +158,13 @@ class TenantSeperationTest extends PHPUnit_Framework_TestCase
 }
 
 /** Stub for a tenant scoped model */
-class EloquentBuilderTestSeperationStub extends Illuminate\Database\Eloquent\Model 
+class EloquentBuilderTestNestingStub extends Illuminate\Database\Eloquent\Model 
 {
 	protected $table = 'table';
+
+	function selfRelation() { return $this->hasMany('EloquentBuilderTestNestingStub'); }
 	
-	use tenantScopedModelTrait;
+	use TenantScopedModelTrait;
 }
 
 class GlobalScopeStub implements Illuminate\Database\Eloquent\ScopeInterface
