@@ -56,12 +56,12 @@ class TenantSeperationTest extends PHPUnit_Framework_TestCase
 		//Reference query
 		$nestedQuery = $this->model->allTenants()->whereRaw("table.tenant_id = '1'");
 		$nestedQuery = $this->getTestOuterQuery($nestedQuery);
-		$nestedQuery->where(function($subq) {
-						$this->getTestSubQuery($subq);
-					});
+		$nestedQuery->where(function($subq) { 
+			$this->getTestSubQuery($subq);
+		});
 
 		//Query to be tested
-		$tenantQuery = $this->getTestOuterQuery($this->model->getQuery());
+		$tenantQuery = $this->getTestOuterQuery($this->model->newQuery());
 		$tenantQuery = $this->getTestSubQuery($tenantQuery);
 
  		$this->assertEquals($nestedQuery->getBindings(), $tenantQuery->getBindings());
