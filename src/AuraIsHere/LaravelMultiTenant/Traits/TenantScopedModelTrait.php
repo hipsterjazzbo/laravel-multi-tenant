@@ -42,7 +42,7 @@ trait TenantScopedModelTrait {
 	 */
 	public static function allTenants()
 	{
-		return with(new static)->newQueryWithoutScope(new TenantScope);
+		return with(new static)->newOriginalQueryWithoutScope(new TenantScope);
 	}
 
 	/**
@@ -96,21 +96,47 @@ trait TenantScopedModelTrait {
      *
      * @return AuraIsHere\LaravelMultiTenant\TenantQueryBuilder
      */
-    public function newTenantQuery()
+    public function newQuery()
     {
-        $tenant_builder = $this->newTenantQueryWithoutScopes();
-
+	    $tenant_builder = $this->newTenantQueryWithoutScopes();
+	    
         //Create a normal query first, allowing the (interfaced) 
         // scope to use the whereRaw from the non-overridden
         // Eloquent\Query
-        $tenant_builder->setQuery($this->newQuery()->getQuery());
+        $tenant_builder->setQuery($this->newOriginalQuery()->getQuery());
 
         return $tenant_builder;
     }
 
     /**
+	 * Get a new query builder for the model's table.
+	 *  without the nesting behaviour
+	 *
+	 * @return \Illuminate\Database\Eloquent\Builder
+	 */
+	public function newOriginalQuery()
+	{
+		$builder = $this->newQueryWithoutScopes();
+
+		return $this->applyGlobalScopes($builder);
+	}
+
+	/**
+	 * Get a new query instance without a given scope.
+	 *  and without nesting behaviour
+	 *
+	 * @param  \Illuminate\Database\Eloquent\ScopeInterface  $scope
+	 * @return \Illuminate\Database\Eloquent\Builder
+	 */
+	public function newOriginalQueryWithoutScope($scope)
+	{
+		$this->getGlobalScope($scope)->remove($builder = $this->newOriginalQuery(), $this);
+		return $builder;
+	}
+
+    /**
      * Get a new query builder with nested where
-     * that doesn't have any global scopes.
+     *  without global scopes.
      *
      * @return \Illuminate\Database\Eloquent\Builder|static
      */
@@ -148,8 +174,8 @@ trait TenantScopedModelTrait {
         if (in_array($method, ['increment', 'decrement'])) {
             return call_user_func_array([$this, $method], $parameters);
         }
-        
-        $query = $this->newTenantQuery();
+            	
+        $query = $this->newQuery();
         return call_user_func_array([$query, $method], $parameters);
     }
 } 

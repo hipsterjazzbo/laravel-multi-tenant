@@ -1,6 +1,7 @@
 <?php namespace AuraIsHere\LaravelMultiTenant;
 
 use Closure;
+use Illuminate\Support\Str;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\Relation;
@@ -16,20 +17,15 @@ class TenantQueryBuilder extends Builder
 	/**
 	 * These methods should be passed into the nested Where query
 	 * 
-	 * Anything with 'has' is already passed into 
-	 *  the model's 'where' method
+	 * Anything starting with 'where' is already passed to handle dynamicWhere
+	 * Anything with 'has' is already passed into the model's 'where' method
 	 *
 	 * @var string[]
 	 */
-	protected $shouldBeNested = ["whereraw", "orwhereraw", 
-								 "wherebetween", "orwherebetween", "wherenotbetween", "orwherenotbetween", 
-								 "wherenested", "wheresub", "addnestedsubquery",
-								 "whereexists", "orwhereexists", "wherenotexists", "orwherenotexists", 
-								 "wherein", "orwherein", "wherenotin", "orwherenotin",
-								 "whereinsub", "wherenull", "orwherenull", "wherenotnull", "orwherenotnull",
-								 "wheredate", "whereday", "wheremonth", "whereyear", 
-								 "dynamicwhere"
-								];
+	protected $shouldBeNested = ["orwhereraw", "orwherebetween", "orwherenotbetween", "addnestedsubquery", 
+								 "orwhereexists", "orwherenotexists", "orwherein", "orwherenotin",
+								 "orwherenull","orwherenotnull", "dynamicwhere"
+								];							
 		
 	/**
 	 * Add a basic where clause to the nested query.
@@ -56,7 +52,7 @@ class TenantQueryBuilder extends Builder
     {
     	if(is_null($this->nestedWhere)) 
     	{
-    		//Create a new query
+    		//Create a new (non-tenant) query builder
 			// and add it as a nested where
     		$query = $this->model->newQueryWithoutScopes();
 
@@ -117,7 +113,8 @@ class TenantQueryBuilder extends Builder
         {
             return $this->callScope($scope, $parameters);
         } 
-        elseif( in_array(strtolower($method), $this->shouldBeNested, true) ) 
+        elseif( in_array(strtolower($method), $this->shouldBeNested, true) ||
+        		Str::startsWith($method, 'where')) 
         {
         	//Catch any nestable methods and pass them to the nested query
         	return $this->addToNestedQuery($method, $parameters);
