@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use AuraIsHere\LaravelMultiTenant\TenantScope;
 use AuraIsHere\LaravelMultiTenant\TenantQueryBuilder;
+use AuraIsHere\LaravelMultiTenant\Contracts\LoftyScope;
 use AuraIsHere\LaravelMultiTenant\Facades\TenantScopeFacade;
 use AuraIsHere\LaravelMultiTenant\Exceptions\TenantModelNotFoundException;
 
@@ -118,7 +119,7 @@ trait TenantScopedModelTrait {
 	{
 		$builder = $this->newQueryWithoutScopes();
 
-		return $this->applyGlobalScopes($builder);
+		return $this->applyGlobalScopes($builder);	
 	}
 
 	/**
@@ -138,7 +139,7 @@ trait TenantScopedModelTrait {
      * Get a new query builder with nested where
      *  without global scopes.
      *
-     * @return \Illuminate\Database\Eloquent\Builder|static
+     * @return AuraIsHere\LaravelMultiTenant\TenantQueryBuilder|static
      */
     public function newTenantQueryWithoutScopes()
     {
@@ -155,12 +156,35 @@ trait TenantScopedModelTrait {
      * Create a new Eloquent Tenant query builder for the model.
      *
      * @param  \Illuminate\Database\Query\Builder $query
-     * @return \Illuminate\Database\Eloquent\Builder|static
+     * @return AuraIsHere\LaravelMultiTenant\TenantQueryBuilder|static
      */
     public function newEloquentTenantBuilder($query)
     {
         return new TenantQueryBuilder($query);
     }
+
+    /**
+	 * Apply all of the global scopes to an Eloquent builder
+	 *  or it's nested 
+	 *
+	 * @param  \Illuminate\Database\Eloquent\Builder  $builder
+	 * @return \Illuminate\Database\Eloquent\Builder
+	 */
+	public function applyGlobalScopes($builder)
+	{
+		foreach ($this->getGlobalScopes() as $scope)
+		{
+			if($scope instanceof LoftyScope) {
+				$scope->apply($builder, $this);
+			}
+			else {
+				$nestable = $this->newQueryWithoutScopes();
+				$scope->apply($nestable, $this);
+				$builder->addNestedWhereQuery($nestable->getQuery());
+			}
+		}
+		return $builder;
+	}
 
  	/**
      * Handle dynamic method calls into the model.

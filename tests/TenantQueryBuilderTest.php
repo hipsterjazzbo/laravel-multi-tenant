@@ -49,7 +49,7 @@ class TenantQueryBuilderTest extends PHPUnit_Framework_TestCase
 
     /**
      * Test whether:
-     *  where calls are passed to the correct function to be nested
+     *  'where' calls are passed to the correct function to be nested
      */
     public function testSimpleWhere()
     {
@@ -62,6 +62,38 @@ class TenantQueryBuilderTest extends PHPUnit_Framework_TestCase
         
         /** Assertion */
         $this->assertEquals($result, $builder);
+    }
+
+    /** Tests macro's are called correctly */
+    public function testMacrosAreCalledOnBuilder()
+    {
+        unset($_SERVER['__test.builder']);
+        $builder = new TenantQueryBuilder(new Illuminate\Database\Query\Builder(
+            m::mock('Illuminate\Database\ConnectionInterface'),
+            m::mock('Illuminate\Database\Query\Grammars\Grammar'),
+            m::mock('Illuminate\Database\Query\Processors\Processor')
+        ));
+        $builder->macro('fooBar', function ($builder) {
+            $_SERVER['__test.builder'] = $builder;
+            return $builder;
+        });
+        $result = $builder->fooBar();
+        $this->assertEquals($builder, $result);
+        $this->assertEquals($builder, $_SERVER['__test.builder']);
+        unset($_SERVER['__test.builder']);
+    }
+
+    public function testQueryPassThru()
+    {
+        $builder = $this->getBuilder();
+        $builder->getQuery()->shouldReceive('foobar')->once()->andReturn('foo');
+
+        $this->assertInstanceOf('AuraIsHere\LaravelMultiTenant\TenantQueryBuilder', $builder->foobar());
+        
+        $builder = $this->getBuilder();
+        $builder->getQuery()->shouldReceive('insert')->once()->with(['bar'])->andReturn('foo');
+        
+        $this->assertEquals('foo', $builder->insert(['bar']));
     }
 
     protected function getBuilder()
