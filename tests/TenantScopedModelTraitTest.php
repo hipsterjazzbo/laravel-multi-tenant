@@ -1,8 +1,9 @@
 <?php
 
-use AuraIsHere\LaravelMultiTenant\Traits\TenantScopedModelTrait;
-use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Mockery as m;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
+use AuraIsHere\LaravelMultiTenant\Traits\TenantScopedModelTrait;
 
 class TenantScopedModelTraitTest extends PHPUnit_Framework_TestCase
 {
@@ -37,6 +38,23 @@ class TenantScopedModelTraitTest extends PHPUnit_Framework_TestCase
     public function testFindOrFailThrowsTenantException()
     {
         TenantScopedModelStub::findOrFail(1, []);
+	}
+
+	public function testNewQueryReturnsTenantQueryBuilder()
+    {
+        $conn = m::mock('Illuminate\Database\Connection');
+        $grammar = m::mock('Illuminate\Database\Query\Grammars\Grammar');
+        $processor = m::mock('Illuminate\Database\Query\Processors\Processor');
+
+        $conn->shouldReceive('getQueryGrammar')->twice()->andReturn($grammar);
+        $conn->shouldReceive('getPostProcessor')->twice()->andReturn($processor);
+        TenantScopedModelStub::setConnectionResolver($resolver = m::mock('Illuminate\Database\ConnectionResolverInterface'));
+        $resolver->shouldReceive('connection')->andReturn($conn);
+        
+        $model = new TenantScopedModelStub;
+        $builder = $model->newQuery();
+        
+        $this->assertInstanceOf('AuraIsHere\LaravelMultiTenant\TenantQueryBuilder', $builder);
     }
 }
 
@@ -50,7 +68,7 @@ class TenantScopedModelStub extends ParentModel
     }
 }
 
-class ParentModel
+class ParentModel extends Model
 {
     public static function findOrFail($id, $columns)
     {
