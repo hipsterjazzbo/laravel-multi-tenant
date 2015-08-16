@@ -4,6 +4,7 @@ use Closure;
 use Illuminate\Support\Str;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Illuminate\Database\Eloquent\Relations\Relation;
 
 class TenantQueryBuilder extends Builder
@@ -26,7 +27,27 @@ class TenantQueryBuilder extends Builder
 								 "orwhereexists", "orwherenotexists", "orwherein", "orwherenotin",
 								 "orwherenull","orwherenotnull", "dynamicwhere"
 								];							
-		
+
+	/**
+	 * Set a model instance for the model being queried.
+	 *
+	 * @param  \Illuminate\Database\Eloquent\Model  $model
+	 * @return $this
+	 */
+	public function setModel(Model $model)
+	{
+		$this->model = $model;
+		$this->query->from($model->getTable());
+
+		//Add soft deleting macro's to this builder
+		if(method_exists($this->model, 'bootSoftDeletingTrait')) {
+			$scope = new SoftDeletingScope;
+			$scope->extend($this);
+		}
+
+		return $this;
+	}
+
 	/**
 	 * Add a basic where clause to the nested query.
 	 *
@@ -93,7 +114,6 @@ class TenantQueryBuilder extends Builder
             $this->query->mergeBindings($hasQuery->getQuery());
         }
     }
-
 
 	 /**
      * Dynamically handle calls into the query instance.

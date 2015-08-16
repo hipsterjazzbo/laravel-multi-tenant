@@ -97,6 +97,14 @@ class TenantQueryNestingTest extends PHPUnit_Framework_TestCase
 		$this->assertEquals($nestedQuery->toSql(), $tenantQuery->toSql());	
 	}
 
+	public function testSoftDeletingMacrosAreSet()
+	{
+		$globalScopeModel = new EloquentBuilderTestGlobalScopeStub;
+		$tenantQuery = $globalScopeModel->newQuery();
+
+ 		$this->assertEquals($tenantQuery, $tenantQuery->withTrashed());
+	}
+
 	/** 
 	 * A query showcasing many clauses 
 	 */
