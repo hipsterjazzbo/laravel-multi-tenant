@@ -2,15 +2,14 @@
 
 namespace AuraIsHere\LaravelMultiTenant\Traits;
 
-use Illuminate\Support\Facades\Config;
-use Illuminate\Support\Facades\App;
+use AuraIsHere\LaravelMultiTenant\Contracts\LoftyScope;
+use AuraIsHere\LaravelMultiTenant\Exceptions\TenantModelNotFoundException;
+use AuraIsHere\LaravelMultiTenant\TenantQueryBuilder;
+use AuraIsHere\LaravelMultiTenant\TenantScope;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
-use AuraIsHere\LaravelMultiTenant\TenantScope;
-use AuraIsHere\LaravelMultiTenant\TenantQueryBuilder;
-use AuraIsHere\LaravelMultiTenant\Contracts\LoftyScope;
-use AuraIsHere\LaravelMultiTenant\Facades\TenantScopeFacade;
-use AuraIsHere\LaravelMultiTenant\Exceptions\TenantModelNotFoundException;
+use Illuminate\Support\Facades\App;
+use Illuminate\Support\Facades\Config;
 
 /**
  * Class TenantScopedModelTrait.
@@ -34,17 +33,17 @@ trait TenantScopedModelTrait
         });
     }
 
-	/**
-	 * Returns a new builder without the tenant scope applied.
-	 *
-	 *     $allUsers = User::allTenants()->get();
-	 *
-	 * @return \Illuminate\Database\Eloquent\Builder
-	 */
-	public static function allTenants()
-	{
-		return with(new static)->newOriginalQueryWithoutScope(new TenantScope);
-	}
+    /**
+     * Returns a new builder without the tenant scope applied.
+     *
+     *     $allUsers = User::allTenants()->get();
+     *
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    public static function allTenants()
+    {
+        return with(new static())->newOriginalQueryWithoutScope(new TenantScope());
+    }
 
     /**
      * Get the name of the "tenant id" column.
@@ -88,16 +87,16 @@ trait TenantScopedModelTrait
         }
     }
 
-	/**
+    /**
      * Get a new query builder with nested where for the model's table. 
      *
      * @return AuraIsHere\LaravelMultiTenant\TenantQueryBuilder
      */
     public function newQuery()
     {
-	    $tenant_builder = $this->newTenantQueryWithoutScopes();
-	    
-        //Create a normal query first, allowing the (interfaced) 
+        $tenant_builder = $this->newTenantQueryWithoutScopes();
+
+        //Create a normal query first, allowing the (interfaced)
         // scope to use the whereRaw from the non-overridden
         // Eloquent\Query
         $tenant_builder->setQuery($this->newOriginalQuery()->getQuery());
@@ -106,30 +105,32 @@ trait TenantScopedModelTrait
     }
 
     /**
-	 * Get a new query builder for the model's table.
-	 *  without the nesting behaviour
-	 *
-	 * @return \Illuminate\Database\Eloquent\Builder
-	 */
-	public function newOriginalQuery()
-	{
-		$builder = $this->newQueryWithoutScopes();
+     * Get a new query builder for the model's table.
+     *  without the nesting behaviour.
+     *
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    public function newOriginalQuery()
+    {
+        $builder = $this->newQueryWithoutScopes();
 
-		return $this->applyGlobalScopes($builder);	
-	}
+        return $this->applyGlobalScopes($builder);
+    }
 
-	/**
-	 * Get a new query instance without a given scope.
-	 *  and without nesting behaviour
-	 *
-	 * @param  \Illuminate\Database\Eloquent\ScopeInterface  $scope
-	 * @return \Illuminate\Database\Eloquent\Builder
-	 */
-	public function newOriginalQueryWithoutScope($scope)
-	{
-		$this->getGlobalScope($scope)->remove($builder = $this->newOriginalQuery(), $this);
-		return $builder;
-	}
+    /**
+     * Get a new query instance without a given scope.
+     *  and without nesting behaviour.
+     *
+     * @param \Illuminate\Database\Eloquent\ScopeInterface $scope
+     *
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    public function newOriginalQueryWithoutScope($scope)
+    {
+        $this->getGlobalScope($scope)->remove($builder = $this->newOriginalQuery(), $this);
+
+        return $builder;
+    }
 
     /**
      * Get a new query builder with nested where
@@ -148,10 +149,11 @@ trait TenantScopedModelTrait
         return $builder->setModel($this)->with($this->with);
     }
 
-	/**
+    /**
      * Create a new Eloquent Tenant query builder for the model.
      *
-     * @param  \Illuminate\Database\Query\Builder $query
+     * @param \Illuminate\Database\Query\Builder $query
+     *
      * @return AuraIsHere\LaravelMultiTenant\TenantQueryBuilder|static
      */
     public function newEloquentTenantBuilder($query)
@@ -160,33 +162,34 @@ trait TenantScopedModelTrait
     }
 
     /**
-	 * Apply all of the global scopes to an Eloquent builder
-	 *  or it's nested 
-	 *
-	 * @param  \Illuminate\Database\Eloquent\Builder  $builder
-	 * @return \Illuminate\Database\Eloquent\Builder
-	 */
-	public function applyGlobalScopes($builder)
-	{
-		foreach ($this->getGlobalScopes() as $scope)
-		{
-			if($scope instanceof LoftyScope) {
-				$scope->apply($builder, $this);
-			}
-			else {
-				$nestable = $this->newQueryWithoutScopes();
-				$scope->apply($nestable, $this);
-				$builder->addNestedWhereQuery($nestable->getQuery());
-			}
-		}
-		return $builder;
-	}
+     * Apply all of the global scopes to an Eloquent builder
+     *  or it's nested.
+     *
+     * @param \Illuminate\Database\Eloquent\Builder $builder
+     *
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    public function applyGlobalScopes($builder)
+    {
+        foreach ($this->getGlobalScopes() as $scope) {
+            if ($scope instanceof LoftyScope) {
+                $scope->apply($builder, $this);
+            } else {
+                $nestable = $this->newQueryWithoutScopes();
+                $scope->apply($nestable, $this);
+                $builder->addNestedWhereQuery($nestable->getQuery());
+            }
+        }
 
- 	/**
+        return $builder;
+    }
+
+    /**
      * Handle dynamic method calls into the model.
      *
-     * @param  string  $method
-     * @param  array   $parameters
+     * @param string $method
+     * @param array  $parameters
+     *
      * @return mixed
      */
     public function __call($method, $parameters)
@@ -194,8 +197,9 @@ trait TenantScopedModelTrait
         if (in_array($method, ['increment', 'decrement'])) {
             return call_user_func_array([$this, $method], $parameters);
         }
-            	
+
         $query = $this->newQuery();
+
         return call_user_func_array([$query, $method], $parameters);
     }
-} 
+}

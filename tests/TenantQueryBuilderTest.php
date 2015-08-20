@@ -1,11 +1,11 @@
 <?php
 
-use Mockery as m;
 use AuraIsHere\LaravelMultiTenant\TenantQueryBuilder;
+use Mockery as m;
 
 class TenantQueryBuilderTest extends PHPUnit_Framework_TestCase
 {
-	public function tearDown()
+    public function tearDown()
     {
         m::close();
     }
@@ -15,54 +15,54 @@ class TenantQueryBuilderTest extends PHPUnit_Framework_TestCase
      * - The first 'nestable' method call creates a nested query builder, 
      * - both the first and any subsequent 'nestable' method calls are 
      *		passed into this nested builder
-	 * - Any query bindings are also set on the original query
+     * - Any query bindings are also set on the original query.
      */
-	public function testShouldBeNested()
+    public function testShouldBeNested()
     {
-    	/* Expectation */
-		$nestedRawQuery = $this->getMockQueryBuilder();
-		$nestedRawQuery->shouldReceive('getBindings')->twice()->andReturn(['type' => 'value']);
-		$nestedRawQuery->shouldReceive('setBindings')->once()->with([ 'where' => ['flbr' => 1]]);
+        /* Expectation */
+        $nestedRawQuery = $this->getMockQueryBuilder();
+        $nestedRawQuery->shouldReceive('getBindings')->twice()->andReturn(['type' => 'value']);
+        $nestedRawQuery->shouldReceive('setBindings')->once()->with(['where' => ['flbr' => 1]]);
 
-		$nestedQuery = m::mock('Illuminate\Database\Eloquent\Builder');
-		$nestedQuery->shouldReceive('getQuery')->times(4)->andReturn($nestedRawQuery);
-		$nestedQuery->shouldReceive('whereNotBetween')->once()->with('foo', ['bar', 'boo']);
-		$nestedQuery->shouldReceive('whereNull')->once()->with('bah');
-		
-		$model = $this->getMockModel()->makePartial();
-		$model->shouldReceive('newQueryWithoutScopes')->once()->andReturn($nestedQuery);
-		
-		$builder = $this->getBuilder();
-		$builder->getQuery()->shouldReceive('from');
-		$builder->setModel($model);
+        $nestedQuery = m::mock('Illuminate\Database\Eloquent\Builder');
+        $nestedQuery->shouldReceive('getQuery')->times(4)->andReturn($nestedRawQuery);
+        $nestedQuery->shouldReceive('whereNotBetween')->once()->with('foo', ['bar', 'boo']);
+        $nestedQuery->shouldReceive('whereNull')->once()->with('bah');
+
+        $model = $this->getMockModel()->makePartial();
+        $model->shouldReceive('newQueryWithoutScopes')->once()->andReturn($nestedQuery);
+
+        $builder = $this->getBuilder();
+        $builder->getQuery()->shouldReceive('from');
+        $builder->setModel($model);
 
         $builder->getQuery()->shouldReceive('addNestedWhereQuery')->once()->with($nestedRawQuery);
         $builder->getQuery()->shouldReceive('setBindings')->twice()->with(['type' => 'value']);
-        $builder->getQuery()->shouldReceive('getRawBindings')->once()->andReturn([ 'where' => ['flbr' => 1]] );
+        $builder->getQuery()->shouldReceive('getRawBindings')->once()->andReturn(['where' => ['flbr' => 1]]);
 
         /* Execution */
         $result1 = $builder->whereNotBetween('foo', ['bar', 'boo']);
         $result2 = $builder->whereNull('bah');
 
-        /** Assertion */
+        /* Assertion */
         $this->assertEquals($result1, $builder);
         $this->assertEquals($result2, $builder);
     }
 
     /**
      * Test whether:
-     *  'where' calls are passed to the correct function to be nested
+     *  'where' calls are passed to the correct function to be nested.
      */
     public function testSimpleWhere()
     {
-    	$builder = m::mock('AuraIsHere\LaravelMultiTenant\TenantQueryBuilder[addToNestedQuery]', [$this->getMockQueryBuilder()]);
-		$builder->shouldAllowMockingProtectedMethods();
-		$builder->shouldReceive('addToNestedQuery')->once()->with('where', ['foo', null, null, 'and'])->andReturn($builder);
+        $builder = m::mock('AuraIsHere\LaravelMultiTenant\TenantQueryBuilder[addToNestedQuery]', [$this->getMockQueryBuilder()]);
+        $builder->shouldAllowMockingProtectedMethods();
+        $builder->shouldReceive('addToNestedQuery')->once()->with('where', ['foo', null, null, 'and'])->andReturn($builder);
 
         /* Execution */
         $result = $builder->where('foo');
-        
-        /** Assertion */
+
+        /* Assertion */
         $this->assertEquals($result, $builder);
     }
 
@@ -77,6 +77,7 @@ class TenantQueryBuilderTest extends PHPUnit_Framework_TestCase
         ));
         $builder->macro('fooBar', function ($builder) {
             $_SERVER['__test.builder'] = $builder;
+
             return $builder;
         });
         $result = $builder->fooBar();
@@ -91,10 +92,10 @@ class TenantQueryBuilderTest extends PHPUnit_Framework_TestCase
         $builder->getQuery()->shouldReceive('foobar')->once()->andReturn('foo');
 
         $this->assertInstanceOf('AuraIsHere\LaravelMultiTenant\TenantQueryBuilder', $builder->foobar());
-        
+
         $builder = $this->getBuilder();
         $builder->getQuery()->shouldReceive('insert')->once()->with(['bar'])->andReturn('foo');
-        
+
         $this->assertEquals('foo', $builder->insert(['bar']));
     }
 
@@ -104,18 +105,20 @@ class TenantQueryBuilderTest extends PHPUnit_Framework_TestCase
     }
 
     protected function getMockModel()
-	{
-		$model = m::mock('Illuminate\Database\Eloquent\Model');
-		$model->shouldReceive('getKeyName')->andReturn('foo');
-		$model->shouldReceive('getTable')->andReturn('foo_table');
-		$model->shouldReceive('getQualifiedKeyName')->andReturn('foo_table.foo');
-		return $model;
-	}
+    {
+        $model = m::mock('Illuminate\Database\Eloquent\Model');
+        $model->shouldReceive('getKeyName')->andReturn('foo');
+        $model->shouldReceive('getTable')->andReturn('foo_table');
+        $model->shouldReceive('getQualifiedKeyName')->andReturn('foo_table.foo');
+
+        return $model;
+    }
 
     protected function getMockQueryBuilder()
     {
         $query = m::mock('Illuminate\Database\Query\Builder');
         $query->shouldReceive('from')->with('foo_table');
+
         return $query;
     }
 }
