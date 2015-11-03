@@ -2,12 +2,13 @@
 
 namespace AuraIsHere\LaravelMultiTenant;
 
+use AuraIsHere\LaravelMultiTenant\Contracts\LoftyScope;
 use AuraIsHere\LaravelMultiTenant\Exceptions\TenantColumnUnknownException;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\ScopeInterface;
 
-class TenantScope implements ScopeInterface
+class TenantScope implements ScopeInterface, LoftyScope
 {
     private $enabled = true;
 
@@ -47,7 +48,7 @@ class TenantScope implements ScopeInterface
      *
      * @param string $tenantColumn
      *
-     * @return boolean
+     * @return bool
      */
     public function removeTenant($tenantColumn)
     {
@@ -65,7 +66,7 @@ class TenantScope implements ScopeInterface
      *
      * @param string $tenantColumn
      *
-     * @return boolean
+     * @return bool
      */
     public function hasTenant($tenantColumn)
     {
@@ -82,7 +83,7 @@ class TenantScope implements ScopeInterface
      */
     public function apply(Builder $builder, Model $model)
     {
-        if (! $this->enabled) {
+        if (!$this->enabled) {
             return;
         }
 
@@ -105,7 +106,7 @@ class TenantScope implements ScopeInterface
         $query = $builder->getQuery();
 
         foreach ($this->getModelTenants($model) as $tenantColumn => $tenantId) {
-            foreach ((array)$query->wheres as $key => $where) {
+            foreach ((array) $query->wheres as $key => $where) {
                 // If the where clause is a tenant constraint, we will remove it from the query
                 // and reset the keys on the wheres. This allows this developer to include
                 // the tenant model in a relationship result set that is lazy loaded.
@@ -125,7 +126,7 @@ class TenantScope implements ScopeInterface
     public function creating(Model $model)
     {
         // If the model has had the global scope removed, bail
-        if (! $model->hasGlobalScope($this)) {
+        if (!$model->hasGlobalScope($this)) {
             return;
         }
 
@@ -146,8 +147,8 @@ class TenantScope implements ScopeInterface
      */
     public function getModelTenants(Model $model)
     {
-        $modelTenantColumns = (array)$model->getTenantColumns();
-        $modelTenants       = [];
+        $modelTenantColumns = (array) $model->getTenantColumns();
+        $modelTenants = [];
 
         foreach ($modelTenantColumns as $tenantColumn) {
             if ($this->hasTenant($tenantColumn)) {
@@ -167,9 +168,9 @@ class TenantScope implements ScopeInterface
      */
     public function getTenantId($tenantColumn)
     {
-        if (! $this->hasTenant($tenantColumn)) {
+        if (!$this->hasTenant($tenantColumn)) {
             throw new TenantColumnUnknownException(
-                get_class($this->model) . ': tenant column "' . $tenantColumn . '" NOT found in tenants scope "' . json_encode($this->tenants) . '"'
+                get_class($this->model).': tenant column "'.$tenantColumn.'" NOT found in tenants scope "'.json_encode($this->tenants).'"'
             );
         }
 

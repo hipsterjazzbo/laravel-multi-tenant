@@ -22,7 +22,7 @@ class LaravelMultiTenantServiceProvider extends ServiceProvider
     public function boot()
     {
         $this->publishes([
-            __DIR__ . '/../../config/config.php' => config_path('tenant.php'),
+            __DIR__.'/../../config/config.php' => config_path('tenant.php'),
         ]);
     }
 
@@ -34,7 +34,7 @@ class LaravelMultiTenantServiceProvider extends ServiceProvider
     public function register()
     {
         // Merge the package config values so they don't have to have a complete configuration
-        $this->mergeConfigFrom(__DIR__ . '/../../config/config.php', 'tenant');
+        $this->mergeConfigFrom(__DIR__.'/../../config/config.php', 'tenant');
 
         // Register our tenant scope instance
         $this->app->singleton('AuraIsHere\LaravelMultiTenant\TenantScope', function ($app) {
