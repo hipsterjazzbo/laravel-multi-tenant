@@ -1,6 +1,20 @@
 Laravel Multi Tenant
 ====================
 
+***
+***
+***
+
+## NOTE: THIS PACKAGE HAS MOVED
+
+This package is now Laravel 5.2+ only, and has moved to https://github.com/HipsterJazzbo/Landlord.
+
+This version will no longer be maintained, but will stay here for legacy compatibility.
+
+***
+***
+***
+
 ![](https://travis-ci.org/AuraEQ/laravel-multi-tenant.svg?branch=master)
 
 A general purpose multi-tenancy package for Laravel 5.2+. Accidentally derived from the work of [@tonydew](https://github.com/tonydew), and with help from [@rizqidjamaluddin](https://github.com/rizqidjamaluddin)
