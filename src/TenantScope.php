@@ -5,9 +5,9 @@ namespace AuraIsHere\LaravelMultiTenant;
 use AuraIsHere\LaravelMultiTenant\Exceptions\TenantColumnUnknownException;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Scope;
+use Illuminate\Database\Eloquent\ScopeInterface;
 
-class TenantScope implements Scope
+class TenantScope implements ScopeInterface
 {
     /**
      * @var bool
@@ -159,5 +159,18 @@ class TenantScope implements Scope
     public function enable()
     {
         $this->enabled = true;
+    }
+
+    /**
+     * Remove the scope from the given Eloquent query builder.
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder $builder
+     * @param  \Illuminate\Database\Eloquent\Model $model
+     *
+     * @return void
+     */
+    public function remove(Builder $builder, Model $model)
+    {
+        
     }
 }
