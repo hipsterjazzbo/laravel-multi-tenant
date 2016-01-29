@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\ModelNotFoundException;
 /**
  * Class TenantScopedModelTrait.
  *
- * @method static void addGlobalScope(\Illuminate\Database\Eloquent\Scope $scope)
+ * @method static void addGlobalScope(\Illuminate\Database\Eloquent\ScopeInterface $scope)
  * @method static void creating(callable $callback)
  */
 trait TenantScopedModelTrait
@@ -37,7 +37,9 @@ trait TenantScopedModelTrait
      */
     public static function allTenants()
     {
-        return with(new static())->newQueryWithoutScope(TenantScope::class);
+        $tenantScope = app(TenantScope::class);
+
+        return with(new static())->newQueryWithoutScope($tenantScope);
     }
 
     /**
