@@ -1,72 +1,203 @@
 <?php
 
-namespace AuraIsHere\LaravelMultiTenant\Traits;
+namespace AuraIsHere\LaravelMultiTenant;
 
-use AuraIsHere\LaravelMultiTenant\Exceptions\TenantModelNotFoundException;
-use AuraIsHere\LaravelMultiTenant\TenantScope;
+use AuraIsHere\LaravelMultiTenant\Exceptions\TenantColumnUnknownException;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Database\Eloquent\ScopeInterface;
 
-/**
- * Class TenantScopedModelTrait.
- *
- * @method static void addGlobalScope(\Illuminate\Database\Eloquent\ScopeInterface $scope)
- * @method static void creating(callable $callback)
- */
-trait TenantScopedModelTrait
+class TenantScope implements ScopeInterface
 {
-    public static function bootTenantScopedModelTrait()
+    /**
+     * @var bool
+     */
+    private $enabled = true;
+
+    /**
+     * @var \Illuminate\Database\Eloquent\Model
+     */
+    private $model;
+
+    /**
+     * @var array The tenant scopes currently set
+     */
+    protected $tenants = [];
+
+    /**
+     * return tenants.
+     *
+     * @return array
+     */
+    public function getTenants()
     {
-        $tenantScope = app(TenantScope::class);
-
-        // Add the global scope that will handle all operations except create()
-        static::addGlobalScope($tenantScope);
-
-        // Add an observer that will automatically add the tenant id when create()-ing
-        static::creating(function (Model $model) use ($tenantScope) {
-            $tenantScope->creating($model);
-        });
+        return $this->tenants;
     }
 
     /**
-     * Returns a new builder without the tenant scope applied.
+     * Add $tenantColumn => $tenantId to the current tenants array.
      *
-     *     $allUsers = User::allTenants()->get();
-     *
-     * @return \Illuminate\Database\Eloquent\Builder
+     * @param string $tenantColumn
+     * @param mixed  $tenantId
      */
-    public static function allTenants()
+    public function addTenant($tenantColumn, $tenantId)
     {
-        $tenantScope = app(TenantScope::class);
+        $this->enable();
 
-        return with(new static())->newQueryWithoutScope($tenantScope);
+        $this->tenants[$tenantColumn] = $tenantId;
     }
 
     /**
-     * Get the name of the "tenant id" column.
+     * Remove $tenantColumn => $id from the current tenants array.
      *
-     * @return string
+     * @param string $tenantColumn
+     *
+     * @return boolean
      */
-    public function getTenantColumns()
+    public function removeTenant($tenantColumn)
     {
-        return isset($this->tenantColumns) ? $this->tenantColumns : config('tenant.default_tenant_columns');
-    }
+        if ($this->hasTenant($tenantColumn)) {
+            unset($this->tenants[$tenantColumn]);
 
-    /**
-     * Override the default findOrFail method so that we can rethrow a more useful exception.
-     * Otherwise it can be very confusing why queries don't work because of tenant scoping issues.
-     *
-     * @param       $id
-     * @param array $columns
-     *
-     * @throws TenantModelNotFoundException
-     */
-    public static function findOrFail($id, $columns = ['*'])
-    {
-        try {
-            return parent::query()->findOrFail($id, $columns);
-        } catch (ModelNotFoundException $e) {
-            throw with(new TenantModelNotFoundException())->setModel(get_called_class());
+            return true;
+        } else {
+            return false;
         }
     }
+
+    /**
+     * Test whether current tenants include a given tenant.
+     *
+     * @param string $tenantColumn
+     *
+     * @return boolean
+     */
+    public function hasTenant($tenantColumn)
+    {
+        return isset($this->tenants[$tenantColumn]);
+    }
+
+    /**
+     * Apply the scope to a given Eloquent query builder.
+     *
+     * @param Builder                             $builder
+     * @param Model|Traits\TenantScopedModelTrait $model
+     */
+    public function apply(Builder $builder, Model $model)
+    {
+        if (! $this->enabled) {
+            return;
+        }
+
+        foreach ($this->getModelTenants($model) as $tenantColumn => $tenantId) {
+            $builder->where($model->getTable() . '.' . $tenantColumn, '=', $tenantId);
+        }
+    }
+
+    /**
+     * @param Model|Traits\TenantScopedModelTrait $model
+     */
+    public function creating(Model $model)
+    {
+        // If the model has had the global scope removed, bail
+        if (! $model->hasGlobalScope($this)) {
+            return;
+        }
+
+        // Otherwise, scope the new model
+        foreach ($this->getModelTenants($model) as $tenantColumn => $tenantId) {
+            $model->{$tenantColumn} = $tenantId;
+        }
+    }
+
+    /**
+     * Return which tenantColumn => tenantId are really in use for this model.
+     *
+     * @param Model|Traits\TenantScopedModelTrait $model
+     *
+     * @throws TenantColumnUnknownException
+     *
+     * @return array
+     */
+    public function getModelTenants(Model $model)
+    {
+        $modelTenantColumns = (array)$model->getTenantColumns();
+        $modelTenants       = [];
+
+        foreach ($modelTenantColumns as $tenantColumn) {
+            if ($this->hasTenant($tenantColumn)) {
+                $modelTenants[$tenantColumn] = $this->getTenantId($tenantColumn);
+            }
+        }
+
+        return $modelTenants;
+    }
+
+    /**
+     * @param $tenantColumn
+     *
+     * @throws TenantColumnUnknownException
+     *
+     * @return mixed The id of the tenant
+     */
+    public function getTenantId($tenantColumn)
+    {
+        if (! $this->hasTenant($tenantColumn)) {
+            throw new TenantColumnUnknownException(
+                get_class($this->model) . ': tenant column "' . $tenantColumn . '" NOT found in tenants scope "' . json_encode($this->tenants) . '"'
+            );
+        }
+
+        return $this->tenants[$tenantColumn];
+    }
+
+    public function disable()
+    {
+        $this->enabled = false;
+    }
+
+    public function enable()
+    {
+        $this->enabled = true;
+    }
+
+    /**
+     * Remove the scope from the given Eloquent query builder.
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder $builder
+     * @param  \Illuminate\Database\Eloquent\Model $model
+     *
+     * @return void
+     */
+    public function remove(Builder $builder, Model $model)
+    {
+        $query = $builder->getQuery();
+        $bindingKey = 0;
+
+        foreach ($this->getModelTenants($model) as $tenantColumn => $tenantId) {
+            foreach ($query->wheres as $key => $where) {
+                if ($this->isTenantConstraint($where, $model->getTable() . '.' . $tenantColumn, $tenantId)) {
+                    unset($query->wheres[$key]);
+                    $query->wheres = array_values($query->wheres);
+                    $this->removeBinding($query, $bindingKey);
+                    if (in_array($where['type'], ['Null', 'NotNull']) === false) $bindingKey++;
+
+                    break;
+                }
+            }
+        }
+    }
+
+    protected function removeBinding($query, $key) {
+        $bindings = $query->getRawBindings()['where'];
+        unset($bindings[$key]);
+        $query->setBindings($bindings);
+    }
+
+    protected function isTenantConstraint(array $where, $tenantColumn, $tenantId)
+    {
+        var_dump($where['type'] == 'Basic' && $where['column'] == $tenantColumn && $where['value'] == $tenantId, $where['value'], $tenantColumn);
+        return $where['type'] == 'Basic' && $where['column'] == $tenantColumn && $where['value'] == $tenantId;
+    }
+
 }
