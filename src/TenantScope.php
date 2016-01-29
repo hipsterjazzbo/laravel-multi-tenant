@@ -196,7 +196,6 @@ class TenantScope implements ScopeInterface
 
     protected function isTenantConstraint(array $where, $tenantColumn, $tenantId)
     {
-        var_dump($where['type'] == 'Basic' && $where['column'] == $tenantColumn && $where['value'] == $tenantId, $where['value'], $tenantColumn);
         return $where['type'] == 'Basic' && $where['column'] == $tenantColumn && $where['value'] == $tenantId;
     }
 
