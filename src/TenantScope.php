@@ -171,6 +171,32 @@ class TenantScope implements ScopeInterface
      */
     public function remove(Builder $builder, Model $model)
     {
-        
+        $query = $builder->getQuery();
+        $bindingKey = 0;
+
+        foreach ($this->getModelTenants($model) as $tenantColumn => $tenantId) {
+            foreach ($query->wheres as $key => $where) {
+                if ($this->isTenantConstraint($where, $model->getTable() . '.' . $tenantColumn, $tenantId)) {
+                    unset($query->wheres[$key]);
+                    $query->wheres = array_values($query->wheres);
+                    $this->removeBinding($query, $bindingKey);
+                    if (in_array($where['type'], ['Null', 'NotNull']) === false) $bindingKey++;
+
+                    break;
+                }
+            }
+        }
     }
+
+    protected function removeBinding($query, $key) {
+        $bindings = $query->getRawBindings()['where'];
+        unset($bindings[$key]);
+        $query->setBindings($bindings);
+    }
+
+    protected function isTenantConstraint(array $where, $tenantColumn, $tenantId)
+    {
+        return $where['type'] == 'Basic' && $where['column'] == $tenantColumn && $where['value'] == $tenantId;
+    }
+
 }
